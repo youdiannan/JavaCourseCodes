@@ -36,6 +36,7 @@ public class NettyHttpClient {
             // Start the client.
             ChannelFuture f = b.connect(host, port).sync();
             f.channel().writeAndFlush(request);
+            f.channel().closeFuture().sync();
         } finally {
             workerGroup.shutdownGracefully();
         }

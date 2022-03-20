@@ -52,6 +52,7 @@ public class NettyTestHttpServer {
 
                                     ctx.writeAndFlush(response);
                                     System.out.println("message sent");
+                                    ctx.close();
                                 }
 
                                 @Override

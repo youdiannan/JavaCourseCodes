@@ -17,6 +17,8 @@ public class NettyHttpClientOutboundHandler extends SimpleChannelInboundHandler<
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, FullHttpResponse response) throws Exception {
         if (response != null) {
+            // 应该是要去copy一份或者retain给计数加1，不然响应里的byteBuf被回收就拿不到响应体了
+            response.retain();
             if (!HttpUtil.isKeepAlive(response)) {
                 inboundCtx.write(response).addListener(ChannelFutureListener.CLOSE);
             } else {
@@ -25,6 +27,7 @@ public class NettyHttpClientOutboundHandler extends SimpleChannelInboundHandler<
             }
         }
         inboundCtx.flush();
+        inboundCtx.close();
     }
 
     @Override

@@ -13,9 +13,15 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
+import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
+import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.concurrent.FutureCallback;
+import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
 import org.apache.http.impl.nio.reactor.IOReactorConfig;
@@ -23,9 +29,7 @@ import org.apache.http.protocol.HTTP;
 import org.apache.http.util.EntityUtils;
 
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.*;
-import java.util.logging.Filter;
 import java.util.stream.Collectors;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.NO_CONTENT;
@@ -76,16 +80,37 @@ public class HttpOutboundHandler {
         String backendUrl = router.route(this.backendUrls);
         final String url = backendUrl + fullRequest.uri();
         filter.filter(fullRequest, ctx);
-        proxyService.submit(()->fetchGet(fullRequest, ctx, url));
+        proxyService.submit(()-> doRequest(fullRequest, ctx, url));
     }
     
-    private void fetchGet(final FullHttpRequest inbound, final ChannelHandlerContext ctx, final String url) {
-        final HttpGet httpGet = new HttpGet(url);
-        //httpGet.setHeader(HTTP.CONN_DIRECTIVE, HTTP.CONN_CLOSE);
-        httpGet.setHeader(HTTP.CONN_DIRECTIVE, HTTP.CONN_KEEP_ALIVE);
-        httpGet.setHeader("mao", inbound.headers().get("mao"));
+    private void doRequest(final FullHttpRequest inbound, final ChannelHandlerContext ctx, final String url) {
+        HttpRequestBase requestBase;
+        switch (inbound.method().name()) {
+            case HttpGet.METHOD_NAME:
+                requestBase = new HttpGet(url);
+                requestBase.setHeader(HTTP.CONN_DIRECTIVE, HTTP.CONN_KEEP_ALIVE);
+                requestBase.setHeader(HTTP.CONTENT_TYPE, inbound.headers().get(HTTP.CONTENT_TYPE));
+                requestBase.setHeader(HTTP.CONTENT_LEN, inbound.headers().get(HTTP.CONTENT_LEN));
+                requestBase.setHeader(HTTP.CONTENT_ENCODING, inbound.headers().get(HTTP.CONTENT_ENCODING));
+                requestBase.setHeader("mao", inbound.headers().get("mao"));
+                break;
+            case HttpPost.METHOD_NAME:
+                requestBase = new HttpPost(url);
+                requestBase.setHeader(HTTP.CONN_DIRECTIVE, HTTP.CONN_KEEP_ALIVE);
+                requestBase.setHeader(HTTP.CONTENT_TYPE, inbound.headers().get(HTTP.CONTENT_TYPE));
+                requestBase.setHeader(HTTP.CONTENT_LEN, inbound.headers().get(HTTP.CONTENT_LEN));
+                requestBase.setHeader(HTTP.CONTENT_ENCODING, inbound.headers().get(HTTP.CONTENT_ENCODING));
 
-        httpclient.execute(httpGet, new FutureCallback<HttpResponse>() {
+                HttpEntity entity = new ByteArrayEntity(inbound.content().array().clone());
+                ((HttpPost) requestBase).setEntity(entity);
+                break;
+            default:
+                // TODO: 2022/3/20
+                return;
+                
+        }
+
+        httpclient.execute(requestBase, new FutureCallback<HttpResponse>() {
             @Override
             public void completed(final HttpResponse endpointResponse) {
                 try {
@@ -99,13 +124,13 @@ public class HttpOutboundHandler {
             
             @Override
             public void failed(final Exception ex) {
-                httpGet.abort();
+                requestBase.abort();
                 ex.printStackTrace();
             }
             
             @Override
             public void cancelled() {
-                httpGet.abort();
+                requestBase.abort();
             }
         });
     }

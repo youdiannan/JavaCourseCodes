@@ -56,6 +56,16 @@
 <!--    <context:annotation-config />-->
 <!--    -->
     <bean id="school" class="io.kimmking.spring02.School"></bean>
-    
+
+
+<!--    注解方式 -->
+<!--    <context:component-scan base-package="io.kimmking.homework" />-->
+
+<!--    xml配置方式 -->
+    <bean id="iocDemo" class="io.kimmking.homework.IoCDemo">
+        <property name="student">
+            <ref bean="student123" />
+        </property>
+    </bean>
     
 </beans>

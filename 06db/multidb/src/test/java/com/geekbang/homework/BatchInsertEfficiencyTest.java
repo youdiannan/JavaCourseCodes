@@ -1,11 +1,12 @@
 package com.geekbang.homework;
 
 import com.geekbang.Application;
-import com.geekbang.config.DBConfig;
+import com.geekbang.config.DataSourceConfig;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -28,11 +29,11 @@ import java.util.concurrent.atomic.AtomicLong;
 @SpringBootTest(classes = Application.class)
 public class BatchInsertEfficiencyTest {
 
-    @Resource
+    @Autowired
     private DataSource dataSource;
 
-    @Resource
-    private DBConfig dbConfig;
+    @Autowired
+    private DataSourceConfig dataSourceConfig;
 
     private Long startTime;
 
@@ -130,7 +131,7 @@ public class BatchInsertEfficiencyTest {
     }
 
     private Connection getRawConnection() throws Exception {
-        return DriverManager.getConnection(dbConfig.getUrl(), dbConfig.getUsername(), dbConfig.getPassword());
+        return DriverManager.getConnection(dataSourceConfig.getUrl(), dataSourceConfig.getUsername(), dataSourceConfig.getPassword());
     }
 
     private Runnable createBatchInsertTask(int batchSize, AtomicLong idRecorder) {

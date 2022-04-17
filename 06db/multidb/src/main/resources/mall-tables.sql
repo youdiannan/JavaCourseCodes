@@ -67,7 +67,7 @@ CREATE TABLE TB_MALL_USER (
     Password VARCHAR(32) NOT NULL COMMENT '密码',
     CreateTime BIGINT NOT NULL COMMENT '记录创建时间',
     UpdateTime BIGINT NOT NULL COMMENT '记录更新时间',
-    IDX 'IDX_ACCOUNT_PWD' (Account, Password)
+    KEY `IDX_ACCOUNT_PWD` (Account, Password)
 );
 
 # 用户地址表

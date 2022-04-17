@@ -2,16 +2,19 @@ package com.geekbang.config;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.apache.shardingsphere.driver.api.ShardingSphereDataSourceFactory;
+import org.apache.shardingsphere.infra.config.RuleConfiguration;
+import org.apache.shardingsphere.infra.config.algorithm.ShardingSphereAlgorithmConfiguration;
+import org.apache.shardingsphere.shadow.api.config.ShadowRuleConfiguration;
+import org.apache.shardingsphere.shadow.api.config.datasource.ShadowDataSourceConfiguration;
+import org.apache.shardingsphere.shadow.api.config.table.ShadowTableConfiguration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 
 import javax.sql.DataSource;
-import java.util.HashMap;
-import java.util.Map;
+import java.sql.SQLException;
+import java.util.*;
 
 @Configuration
 public class DataSourceConfig {
@@ -31,8 +34,7 @@ public class DataSourceConfig {
     @Value("${spring.datasource.shadow.url}")
     private String shadowUrl;
 
-    @Primary
-    @Bean
+    @Bean("dynamicDataSource")
     public DataSource dynamicDataSource() {
         Map<Object, Object> targetDataSources = new HashMap<>();
         DataSource defaultDataSource = hikariDataSource();
@@ -44,6 +46,54 @@ public class DataSourceConfig {
         dynamicDataSource.setTargetDataSources(targetDataSources);
         dynamicDataSource.setDefaultTargetDataSource(defaultDataSource);
         return dynamicDataSource;
+    }
+
+    @Bean("shardingDataSource")
+    public DataSource shardingDataSource() throws SQLException {
+        Map<String, DataSource> dataSourceMap = new HashMap<>();
+        dataSourceMap.put(DynamicDataSource.DEFAULT_DATASOURCE, hikariDataSource());
+        dataSourceMap.put(DynamicDataSource.SHADOW_DATASOURCE, shadowDataSource());
+        return ShardingSphereDataSourceFactory.createDataSource(dataSourceMap, createRuleConfigs(), null);
+    }
+
+    private Collection<RuleConfiguration> createRuleConfigs() {
+        Collection<RuleConfiguration> rules = new LinkedList<>();
+        rules.add(createShadowRuleConfig());
+        return rules;
+    }
+
+    private RuleConfiguration createShadowRuleConfig() {
+        ShadowRuleConfiguration result = new ShadowRuleConfiguration();
+        result.setDataSources(createShadowDataSources());
+        result.setShadowAlgorithms(createShadowAlgorithms());
+        result.setTables(createShadowTables());
+        return result;
+    }
+
+    private Map<String, ShadowDataSourceConfiguration> createShadowDataSources() {
+        Map<String, ShadowDataSourceConfiguration> result = new HashMap<>();
+        result.put("shadow-data-source", new ShadowDataSourceConfiguration(
+                DynamicDataSource.DEFAULT_DATASOURCE, DynamicDataSource.SHADOW_DATASOURCE));
+        return result;
+    }
+
+    private Map<String, ShardingSphereAlgorithmConfiguration> createShadowAlgorithms() {
+        Map<String, ShardingSphereAlgorithmConfiguration> result = new HashMap<>();
+        Properties orderIdSelectProps = new Properties();
+        orderIdSelectProps.put("operation", "select");
+        orderIdSelectProps.put("column", "Id");
+        // 以5结束的id命中影子库
+        orderIdSelectProps.put("regex", ".*5");
+        result.put("select-regex-match-algorithm",
+                new ShardingSphereAlgorithmConfiguration("REGEX_MATCH", orderIdSelectProps));
+        return result;
+    }
+
+    private Map<String, ShadowTableConfiguration> createShadowTables() {
+        Map<String, ShadowTableConfiguration> result = new HashMap<>();
+        result.put("TB_MALL_ORDER", new ShadowTableConfiguration(new ArrayList<String>(){{add("shadow-data-source");}},
+               new ArrayList<String>(){{add("select-regex-match-algorithm");}}));
+        return result;
     }
 
     public DataSource hikariDataSource() {

@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @SpringBootTest(classes = Application.class)
 public class BatchInsertEfficiencyTest {
 
-    @Autowired
+    @Resource(name = "dynamicDataSource")
     private DataSource dataSource;
 
     @Autowired

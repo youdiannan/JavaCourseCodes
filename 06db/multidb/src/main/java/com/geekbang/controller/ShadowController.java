@@ -2,11 +2,11 @@ package com.geekbang.controller;
 
 import com.geekbang.config.DynamicDataSource;
 import com.geekbang.vo.OrderVO;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.annotation.Resource;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -16,8 +16,11 @@ import java.sql.SQLException;
 @RestController
 public class ShadowController {
 
-    @Autowired
-    private DataSource dataSource;
+    @Resource(name = "dynamicDataSource")
+    private DataSource dynamicDataSource;
+
+    @Resource(name = "shardingDataSource")
+    private DataSource shardingDataSource;
 
     @GetMapping("/dynamicDS")
     public OrderVO dynamicDataSourceDemo(@RequestParam("id") long id, @RequestParam("shadow") boolean shadow) {
@@ -29,10 +32,15 @@ public class ShadowController {
             DynamicDataSource.setLookupKey(DynamicDataSource.DEFAULT_DATASOURCE);
         }
 
-        return selectById(id);
+        return selectById(id, dynamicDataSource);
     }
 
-    private OrderVO selectById(long id) {
+    @GetMapping("/shardingDS")
+    public OrderVO shardingDataSourceDemo(@RequestParam("id") long id) {
+        return selectById(id, shardingDataSource);
+    }
+
+    private OrderVO selectById(long id, DataSource dataSource) {
         try {
             String selectSql = "SELECT * FROM TB_MALL_ORDER WHERE Id = ?";
             Connection connection = dataSource.getConnection();

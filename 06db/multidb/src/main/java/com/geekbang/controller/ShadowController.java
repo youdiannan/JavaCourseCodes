@@ -13,13 +13,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-@RestController
+//@RestController
 public class ShadowController {
 
     @Resource(name = "dynamicDataSource")
     private DataSource dynamicDataSource;
 
-    @Resource(name = "shardingDataSource")
+    @Resource(name = "shardingShadowDataSource")
     private DataSource shardingDataSource;
 
     @GetMapping("/dynamicDS")

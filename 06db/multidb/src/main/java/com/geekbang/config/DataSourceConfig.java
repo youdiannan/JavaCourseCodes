@@ -34,7 +34,16 @@ public class DataSourceConfig {
     @Value("${spring.datasource.shadow.url}")
     private String shadowUrl;
 
-    @Bean("dynamicDataSource")
+    @Value("${sharding.url}")
+    private String shardingUrl;
+
+    @Value("${sharding.username}")
+    private String shardingUsername;
+
+    @Value("${sharding.password}")
+    private String shardingPassword;
+
+//    @Bean("dynamicDataSource")
     public DataSource dynamicDataSource() {
         Map<Object, Object> targetDataSources = new HashMap<>();
         DataSource defaultDataSource = hikariDataSource();
@@ -48,12 +57,22 @@ public class DataSourceConfig {
         return dynamicDataSource;
     }
 
-    @Bean("shardingDataSource")
-    public DataSource shardingDataSource() throws SQLException {
+//    @Bean("shadowDataSource")
+    public DataSource shardingShadowDataSource() throws SQLException {
         Map<String, DataSource> dataSourceMap = new HashMap<>();
         dataSourceMap.put(DynamicDataSource.DEFAULT_DATASOURCE, hikariDataSource());
         dataSourceMap.put(DynamicDataSource.SHADOW_DATASOURCE, shadowDataSource());
         return ShardingSphereDataSourceFactory.createDataSource(dataSourceMap, createRuleConfigs(), null);
+    }
+
+    @Bean("shardingDataSource")
+    public DataSource shardingDataSource() {
+        HikariConfig hikariConfig = new HikariConfig();
+        hikariConfig.setDriverClassName(driverClassName);
+        hikariConfig.setJdbcUrl(shardingUrl);
+        hikariConfig.setUsername(shardingUsername);
+        hikariConfig.setPassword(shardingPassword);
+        return new HikariDataSource(hikariConfig);
     }
 
     private Collection<RuleConfiguration> createRuleConfigs() {

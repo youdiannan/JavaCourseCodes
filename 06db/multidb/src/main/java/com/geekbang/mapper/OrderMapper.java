@@ -11,6 +11,9 @@ public interface OrderMapper {
     @Insert("INSERT INTO TB_MALL_ORDER (OrderTime, PayTime, DiscountAmount, ActualPrice, Buyer, CreateTime, UpdateTime) VALUES (#{orderTime}, #{payTime}, #{discountAmount}, #{actualPrice}, #{buyer}, #{createTime}, #{updateTime})")
     int insert(OrderPO po);
 
+    @Insert("INSERT INTO TB_MALL_ORDER (Id, OrderTime, PayTime, DiscountAmount, ActualPrice, Buyer, CreateTime, UpdateTime) VALUES (#{id}, #{orderTime}, #{payTime}, #{discountAmount}, #{actualPrice}, #{buyer}, #{createTime}, #{updateTime})")
+    int insertWithId(OrderPO po);
+
     @Delete("DELETE FROM TB_MALL_ORDER WHERE Id=#{orderId}")
     int delete(@Param("orderId") Long orderId);
 

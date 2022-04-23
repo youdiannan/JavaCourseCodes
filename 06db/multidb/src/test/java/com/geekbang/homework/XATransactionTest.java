@@ -3,22 +3,24 @@ package com.geekbang.homework;
 import com.geekbang.Application;
 import com.geekbang.mapper.OrderMapper;
 import com.geekbang.po.OrderPO;
-import com.google.gson.Gson;
+import com.geekbang.service.OrderService;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Random;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = Application.class)
-public class ShardingTest {
+public class XATransactionTest {
+
+    @Autowired
+    private OrderService orderService;
 
     @Autowired
     private OrderMapper orderMapper;
@@ -36,14 +38,6 @@ public class ShardingTest {
         }
     }
 
-    @Test
-    public void testInsert() {
-        OrderPO orderPO = createOrderPO();
-
-        int count = orderMapper.insert(orderPO);
-        System.out.println(count + " inserted.");
-    }
-
     private OrderPO createOrderPO() {
         long time = System.currentTimeMillis();
         OrderPO orderPO = new OrderPO();
@@ -58,28 +52,23 @@ public class ShardingTest {
     }
 
     @Test
-    public void testSelect() {
-        List<OrderPO> orderPOS = orderMapper.selectAll();
-        System.out.println(new Gson().toJson(orderPOS));
-    }
+    public void transferBuyerTransactionTest() {
+        // 分布式事务成功
+        OrderPO originOrder = orderMapper.selectById(orderId);
+        orderService.transferBuyer(orderId, false);
+        // buyer + 1
+        OrderPO transferredOrder = orderMapper.selectById(orderId);
+        Assert.assertEquals(originOrder.getBuyer() + 1, (long)transferredOrder.getBuyer());
 
-    @Test
-    @Transactional
-    public void testDelete() {
-        System.out.println("===================");
-        System.out.println(orderMapper.selectById(orderId));
-        orderMapper.delete(orderId);
-        System.out.println(orderMapper.selectById(orderId));
-        System.out.println("===================");
-    }
+        // 分布式事务失败
+        originOrder = orderMapper.selectById(orderId);
+        try {
+            orderService.transferBuyer(orderId, true);
+        } catch (Exception e) {
 
-    @Test
-    @Transactional
-    public void testUpdate() {
-        System.out.println("===================");
-        System.out.println(orderMapper.selectById(orderId));
-        orderMapper.cancel(orderId);
-        System.out.println(orderMapper.selectById(orderId));
-        System.out.println("===================");
+        }
+        // buyer不变
+        transferredOrder = orderMapper.selectById(orderId);
+        Assert.assertEquals(originOrder, transferredOrder);
     }
 }

@@ -2,26 +2,30 @@ package io.github.kimmking.gateway.inbound;
 
 import io.github.kimmking.gateway.filter.HeaderHttpRequestFilter;
 import io.github.kimmking.gateway.filter.HttpRequestFilter;
-import io.github.kimmking.gateway.outbound.httpclient4.HttpOutboundHandler;
+import io.github.kimmking.gateway.outbound.netty4.NettyHttpClient;
+import io.github.kimmking.gateway.router.HttpEndpointRouter;
+import io.github.kimmking.gateway.router.RandomHttpEndpointRouter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.*;
 import io.netty.util.ReferenceCountUtil;
+import org.apache.http.impl.bootstrap.HttpServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.URI;
+import java.net.URL;
 import java.util.List;
 
 public class HttpInboundHandler extends ChannelInboundHandlerAdapter {
 
     private static Logger logger = LoggerFactory.getLogger(HttpInboundHandler.class);
     private final List<String> proxyServer;
-    private HttpOutboundHandler handler;
-    private HttpRequestFilter filter = new HeaderHttpRequestFilter();
-    
+    private HttpRequestFilter requestFilter = new HeaderHttpRequestFilter();
+    private HttpEndpointRouter router = new RandomHttpEndpointRouter();
+
     public HttpInboundHandler(List<String> proxyServer) {
         this.proxyServer = proxyServer;
-        this.handler = new HttpOutboundHandler(this.proxyServer);
     }
     
     @Override
@@ -32,21 +36,43 @@ public class HttpInboundHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         try {
-            //logger.info("channelRead流量接口请求开始，时间为{}", startTime);
+            logger.info("channelRead流量接口请求开始，时间为{}", System.currentTimeMillis());
             FullHttpRequest fullRequest = (FullHttpRequest) msg;
-//            String uri = fullRequest.uri();
-//            //logger.info("接收到的请求url为{}", uri);
-//            if (uri.contains("/test")) {
-//                handlerTest(fullRequest, ctx);
-//            }
-    
-            handler.handle(fullRequest, ctx, filter);
-    
+
+            preFilter(fullRequest, ctx);
+
+            forward(fullRequest, ctx);
+
         } catch(Exception e) {
+            // 兜底
             e.printStackTrace();
-        } finally {
-            ReferenceCountUtil.release(msg);
+            ctx.writeAndFlush(createDefaultExceptionHttpResponse());
         }
+    }
+
+    private void preFilter(FullHttpRequest fullRequest, ChannelHandlerContext ctx) {
+        // TODO: 2022/3/20 chain
+        requestFilter.filter(fullRequest, ctx);
+    }
+
+
+    private void forward(FullHttpRequest fullRequest, ChannelHandlerContext ctx) throws Exception {
+        List<String> backendUrls = fetchServiceUrls(fullRequest.uri());
+        String route = router.route(backendUrls);
+
+        // TODO: 2022/3/20 修改请求路径
+        // 防止多个线程共用连接，todo
+        NettyHttpClient httpClient = new NettyHttpClient();
+        httpClient.doRequest(route, fullRequest, ctx);
+    }
+
+    private List<String> fetchServiceUrls(String uri) {
+        return this.proxyServer;
+    }
+
+
+    private FullHttpResponse createDefaultExceptionHttpResponse() {
+        return new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR);
     }
 
 //    private void handlerTest(FullHttpRequest fullRequest, ChannelHandlerContext ctx) {

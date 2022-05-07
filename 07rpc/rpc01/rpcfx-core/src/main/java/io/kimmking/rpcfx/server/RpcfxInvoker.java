@@ -5,10 +5,12 @@ import com.alibaba.fastjson.serializer.SerializerFeature;
 import io.kimmking.rpcfx.api.RpcfxRequest;
 import io.kimmking.rpcfx.api.RpcfxResolver;
 import io.kimmking.rpcfx.api.RpcfxResponse;
+import io.kimmking.rpcfx.server.service.GenericService;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.ServiceLoader;
 
 public class RpcfxInvoker {
 
@@ -23,16 +25,15 @@ public class RpcfxInvoker {
         String serviceClass = request.getServiceClass();
 
         // 作业1：改成泛型和反射
-        Object service = resolver.resolve(serviceClass);//this.applicationContext.getBean(serviceClass);
-
         try {
-            Method method = resolveMethodFromClass(service.getClass(), request.getMethod());
-            Object result = method.invoke(service, request.getParams()); // dubbo, fastjson,
+            // todo 尝试将服务端写死查找接口实现类变成泛型和反射；
+            GenericService genericService = resolver.resolveGeneric(serviceClass);
+            Object result = genericService.$invoke(request.getMethod(), request.getParams()); // dubbo, fastjson,
             // 两次json序列化能否合并成一个
             response.setResult(JSON.toJSONString(result, SerializerFeature.WriteClassName));
             response.setStatus(true);
             return response;
-        } catch ( IllegalAccessException | InvocationTargetException e) {
+        } catch (ClassNotFoundException | IllegalAccessException | InvocationTargetException e) {
 
             // 3.Xstream
 
@@ -43,6 +44,27 @@ public class RpcfxInvoker {
             response.setStatus(false);
             return response;
         }
+
+//        Object service = resolver.resolve(serviceClass);//this.applicationContext.getBean(serviceClass);
+//
+//        try {
+//            Method method = resolveMethodFromClass(service.getClass(), request.getMethod());
+//            Object result = method.invoke(service, request.getParams()); // dubbo, fastjson,
+//            // 两次json序列化能否合并成一个
+//            response.setResult(JSON.toJSONString(result, SerializerFeature.WriteClassName));
+//            response.setStatus(true);
+//            return response;
+//        } catch ( IllegalAccessException | InvocationTargetException e) {
+//
+//            // 3.Xstream
+//
+//            // 2.封装一个统一的RpcfxException
+//            // 客户端也需要判断异常
+//            e.printStackTrace();
+//            response.setException(e);
+//            response.setStatus(false);
+//            return response;
+//        }
     }
 
     private Method resolveMethodFromClass(Class<?> klass, String methodName) {

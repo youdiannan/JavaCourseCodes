@@ -1,0 +1,19 @@
+hmily:
+  server:
+    configMode: local
+    appName: account-consumer
+  #  如果server.configMode eq local 的时候才会读取到这里的配置信息.
+  config:
+    appName: account-consumer
+    repository: mysql
+
+repository:
+  database:
+    driverClassName: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/hmily?characterEncoding=utf8
+    username: root
+    password: Aa123456
+
+metrics:
+  metricsName: prometheus
+  port: 9071

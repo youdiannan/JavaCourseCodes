@@ -7,7 +7,7 @@ import org.dromara.hmily.annotation.HmilyTCC;
 import org.dromara.hmily.common.exception.HmilyRuntimeException;
 import org.springframework.stereotype.Service;
 
-@Service
+//@Service
 public class CurrencyAccountServiceImpl implements CurrencyAccountService{
 
     @DubboReference(version = "1.0.0", timeout = 1000000)

@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 
-@RestController
+//@RestController
 @RequestMapping("/account")
 public class AccountController {
 

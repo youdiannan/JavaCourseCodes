@@ -5,6 +5,9 @@ spring:
   main:
     allow-bean-definition-overriding: true
     web-application-type: none
+  redis:
+    host: 172.31.183.175
+    port: 6379
 dubbo:
   scan:
     base-packages: io.kimmking.dubbo.demo.consumer

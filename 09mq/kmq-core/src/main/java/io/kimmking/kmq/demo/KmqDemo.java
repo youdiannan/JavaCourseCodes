@@ -47,7 +47,7 @@ public class KmqDemo {
             if( c == 'q' || c == 'e') break;
         }
 
-        flag[0] = false;
+//        flag[0] = false;
 
     }
 }

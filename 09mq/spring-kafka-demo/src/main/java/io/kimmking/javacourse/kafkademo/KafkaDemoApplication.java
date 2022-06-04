@@ -1,5 +1,6 @@
 package io.kimmking.javacourse.kafkademo;
 
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.protocol.types.Field;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationRunner;
@@ -10,6 +11,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.support.MessageBuilder;
 
+import java.util.HashMap;
 import java.util.Scanner;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;

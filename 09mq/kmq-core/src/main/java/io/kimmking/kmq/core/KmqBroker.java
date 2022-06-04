@@ -25,4 +25,8 @@ public final class KmqBroker { // Broker+Connection
         return new KmqConsumer(this);
     }
 
+    public KmqConsumer createConsumer(String consumerId) {
+        return new KmqConsumer(this, consumerId);
+    }
+
 }
